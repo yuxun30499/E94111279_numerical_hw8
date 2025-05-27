@@ -46,8 +46,6 @@ def phi2(x): return x**2
 
 phi = [phi0, phi1, phi2]
 
-from scipy.integrate import quad
-
 def A_ij(i, j):
     integrand = lambda x: phi[i](x) * phi[j](x)
     val, _ = quad(integrand, -1, 1)
@@ -66,38 +64,56 @@ a2 = np.linalg.solve(A2, b2)
 
 print("二次多項式擬合係數 a0, a1, a2:", a2)
 
-print("\n==== 第三題：離散最小平方三角多項式 S4 ====")
-m = 16
-x3_points = np.linspace(0, 1, m, endpoint=False)
+print("\n==== 第三題：離散最小平方三角多項式 S4 (改寫版) ====")
+# 原函數
 f3 = lambda x: x**2 * np.sin(x)
 
-f3_vals = f3(x3_points)
+# m = 31 離散點
+m3 = 31
+x3 = np.linspace(0, 1, m3, endpoint=False)
+y3 = f3(x3)
+
 N = 4
-
-a3 = np.zeros(N + 1)
-b3 = np.zeros(N + 1)
-
-a3[0] = (2 / m) * np.sum(f3_vals)
+a0_3 = (2 / m3) * np.sum(y3)
+a_k_3 = np.zeros(N)
+b_k_3 = np.zeros(N)
 
 for k in range(1, N + 1):
-    a3[k] = (2 / m) * np.sum(f3_vals * np.cos(k * np.pi * x3_points))
-    b3[k] = (2 / m) * np.sum(f3_vals * np.sin(k * np.pi * x3_points))
+    a_k_3[k - 1] = (2 / m3) * np.sum(y3 * np.cos(2 * np.pi * k * x3))
+    b_k_3[k - 1] = (2 / m3) * np.sum(y3 * np.sin(2 * np.pi * k * x3))
 
-print("a係數:", a3)
-print("b係數:", b3)
+# 輸出方程式字串
+S4_terms = [f"{a0_3/2:.6f}"]
+for k in range(1, N + 1):
+    S4_terms.append(f"{a_k_3[k - 1]:+.6f} * cos(2π*{k}*x)")
+    S4_terms.append(f"{b_k_3[k - 1]:+.6f} * sin(2π*{k}*x)")
 
-def S4(x):
-    res = a3[0] / 2
+S4_equation = " ".join(S4_terms)
+print("(a) S₄(x) =")
+print("    " + S4_equation)
+
+def S4_func(x_val):
+    result = a0_3 / 2
     for k in range(1, N + 1):
-        res += a3[k] * np.cos(k * np.pi * x) + b3[k] * np.sin(k * np.pi * x)
-    return res
+        result += a_k_3[k - 1] * np.cos(2 * np.pi * k * x_val)
+        result += b_k_3[k - 1] * np.sin(2 * np.pi * k * x_val)
+    return result
 
-integral_S4, _ = quad(S4, 0, 1)
-print("∫0^1 S4(x) dx =", integral_S4)
+# (b)
+integral_S4_3, _ = quad(S4_func, 0, 1)
+print(f"\n(b) ∫₀¹ S₄(x) dx ≈ {integral_S4_3:.6f}")
 
-integral_f3, _ = quad(f3, 0, 1)
-print("∫0^1 x^2 sin(x) dx =", integral_f3)
+# (c)
+integral_exact_3, _ = quad(f3, 0, 1)
+difference_3 = abs(integral_S4_3 - integral_exact_3)
+print(f"(c) ∫₀¹ x² sin(x) dx ≈ {integral_exact_3:.6f}")
+print(f"    差異 ≈ {difference_3:.6e}")
 
-error_S4 = np.sum((f3_vals - S4(x3_points)) ** 2)
-print("誤差 E(S4) =", error_S4)
+# (d)
+x_dense_3 = np.linspace(0, 1, 1000)
+f_vals_3 = f3(x_dense_3)
+S4_vals_3 = S4_func(x_dense_3)
+error_3 = np.sqrt(np.sum((f_vals_3 - S4_vals_3) ** 2) / len(x_dense_3))
+print(f"(d) E(S₄) ≈ {error_3:.6f}")
+
 
